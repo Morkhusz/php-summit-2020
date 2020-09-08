@@ -16,9 +16,14 @@ class PostController extends Controller
 
     public function show($id)
     {
-        $tweet = Tweets::with(['user', 'comments', 'comments.user', 'likes', 'likes.user'])
-            ->withCount(['comments', 'likes'])
-            ->find($id);
+        $tweet = Tweets::with([
+                'user:name,id', 'comments:comment,id,user_id,tweet_id',
+                'comments.user:name,id', 'likes:id,user_id,tweet_id',
+                'likes.user:id,name'
+            ])
+            ->find($id, ['tweet', 'id', 'user_id']);
+        $tweet->likesCount = count($tweet->likes);
+        $tweet->commentsCount = count($tweet->comments);
         return response()
             ->json($tweet);
     }
