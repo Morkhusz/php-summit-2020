@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\TweetLikes;
 use App\Tweets;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class PostController extends Controller
 {
@@ -16,14 +17,27 @@ class PostController extends Controller
 
     public function show($id)
     {
-        $tweet = Tweets::with([
-                'user:name,id', 'comments:comment,id,user_id,tweet_id',
-                'comments.user:name,id', 'likes:id,user_id,tweet_id',
-                'likes.user:id,name'
-            ])
-            ->find($id, ['tweet', 'id', 'user_id']);
+        $tweet = DB::table('tweets')
+            ->join('users', 'tweets.user_id', '=', 'users.id')
+            ->where('tweets.id', $id)
+            ->select(
+                'tweets.id as id', 'tweets.tweet', 'tweets.user_id',
+                'users.name as author'
+            )
+            ->first();
+        $tweet->comments = DB::table('comments')
+                ->join('users AS u', 'comments.user_id', 'u.id')
+                ->where('tweet_id', $tweet->id)
+                ->select('comments.comment', 'u.name as author')
+                ->get();
+        $tweet->likes = DB::table('likes')
+               ->join('users AS u', 'likes.user_id', 'u.id')
+                ->where('tweet_id', $tweet->id)
+                ->select('u.name as author')
+                ->get();
         $tweet->likesCount = count($tweet->likes);
         $tweet->commentsCount = count($tweet->comments);
+
         return response()
             ->json($tweet);
     }
